@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="1.48">
+<meta name="version" content="1.49">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -64,7 +64,7 @@
   /* ── Player ── */
   /* Cover on the left, song details beside it on the right. Sized by
      screen height too, so the buttons still fit without scrolling. */
-  .now { display: flex; flex-direction: row; align-items: center; gap: 16px; margin-bottom: 20px; }
+  .now { display: flex; flex-direction: row; align-items: center; gap: 16px; margin-bottom: 14px; }
   /* Fixed-size box: its space is kept even while the picture loads
      or when a song has none, so the buttons never jump. */
   .now .art { width: min(46vw, 29vh, 340px); height: min(46vw, 29vh, 340px); border-radius: 14px; background: #222; overflow: hidden; flex-shrink: 0; }
@@ -95,7 +95,7 @@
   .icon-btn { display: flex; align-items: center; justify-content: center; padding: 0; color: #111; }
   .icon-btn svg { fill: currentColor; display: block; }
 
-  .controls { display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 12px; margin-bottom: 18px; }
+  .controls { display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 8px; margin-bottom: 8px; }
   .controls button { height: min(clamp(110px, 28vw, 150px), 18vh); }
   .controls svg { width: 58%; max-width: 90px; height: auto; }
   #btn-prev, #btn-next { background: #000; color: #ff8c00; border-color: #ff8c00; }
@@ -110,7 +110,7 @@
   @media (prefers-reduced-motion: reduce) { #btn-play.playing { animation-duration: 2.4s; } }
 
   /* Thumbs down / thumbs up */
-  .rate { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .rate { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .rate button { background: #3a3a3a; color: #cfcfcf; border-color: #555; height: min(clamp(50px, 12vw, 66px), 7.5vh); }
   .rate svg { width: clamp(32px, 8.5vw, 46px); height: auto; }
   /* Grey until pressed; pressing one hides the other until the next song */
@@ -173,7 +173,7 @@
     font-size: clamp(22px, 5.5vw, 30px); font-weight: 900; letter-spacing: 0.08em;
     padding: 8px 12px; margin-bottom: 14px;
   }
-  .radio-row { display: flex; gap: 12px; margin-top: 18px; }
+  .radio-row { display: flex; gap: 8px; margin-top: 8px; }
   .btn-radio {
     flex: 1 1 0; min-width: 0; background: #4a4a4a; color: #f2f2f2; border-color: #6e6e6e;
     font-size: clamp(15px, 3.8vw, 26px); font-weight: 900; letter-spacing: 0.04em; line-height: 1.15;
@@ -184,7 +184,7 @@
   /* EMAIL under the radio buttons; CLOSE on its own further down.
      Both full width, so the same length. */
   /* CAMERA | EMAIL and FEEDBACK | CLOSE: two rows, half width each */
-  .pair-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  .pair-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
   .pair-row button {
     display: block; width: 100%; min-width: 0; color: #fff;
     font-size: clamp(20px, 5vw, 30px); font-weight: 900; letter-spacing: 0.06em;
