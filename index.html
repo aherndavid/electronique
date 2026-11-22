@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="1.47">
+<meta name="version" content="1.48">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -98,10 +98,16 @@
   .controls { display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 12px; margin-bottom: 18px; }
   .controls button { height: min(clamp(110px, 28vw, 150px), 18vh); }
   .controls svg { width: 58%; max-width: 90px; height: auto; }
-  #btn-prev, #btn-next { background: #fff1a8; color: #111; border-color: #d9c97a; }
+  #btn-prev, #btn-next { background: #000; color: #ff8c00; border-color: #ff8c00; }
   #btn-play { background: #ff8c00; color: #111; border-color: #ffb04d; }
   #btn-play svg { width: 46%; max-width: 80px; }
-  #btn-play.playing { background: #cc6f00; border-color: #ff9a2e; }
+  #btn-play.playing { background: #cc6f00; border-color: #ffb04d; animation: play-flash 1.2s ease-in-out infinite; }
+  /* Playing: the button gently flashes */
+  @keyframes play-flash {
+    0%, 100% { background: #cc6f00; box-shadow: 0 0 0 0 rgba(255, 166, 0, 0); }
+    50%      { background: #ffa733; box-shadow: 0 0 22px 6px rgba(255, 166, 0, 0.75); }
+  }
+  @media (prefers-reduced-motion: reduce) { #btn-play.playing { animation-duration: 2.4s; } }
 
   /* Thumbs down / thumbs up */
   .rate { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -177,13 +183,31 @@
   #btn-gold { background: #b8860b; border-color: #e0b84a; }
   /* EMAIL under the radio buttons; CLOSE on its own further down.
      Both full width, so the same length. */
-  #btn-email, #btn-close {
-    display: block; width: 100%; color: #fff;
-    font-size: clamp(20px, 5vw, 30px); font-weight: 900; letter-spacing: 0.08em;
+  /* CAMERA | EMAIL and FEEDBACK | CLOSE: two rows, half width each */
+  .pair-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  .pair-row button {
+    display: block; width: 100%; min-width: 0; color: #fff;
+    font-size: clamp(20px, 5vw, 30px); font-weight: 900; letter-spacing: 0.06em;
     padding: 8px 12px;
   }
-  #btn-email { background: #1e6fd9; border-color: #5a9bef; margin-top: 18px; }
-  #btn-close { background: #7a0000; border-color: #a83232; margin-top: 44px; }
+  #btn-camera, #btn-feedback { background: #263238; border-color: #64b5f6; }
+  #btn-email { background: #1e6fd9; border-color: #5a9bef; }
+  #btn-close { background: #7a0000; border-color: #a83232; }
+  .stars { display: flex; gap: 8px; margin-top: 10px; }
+  .stars[hidden] { display: none; }
+  .stars button {
+    flex: 1 1 0; min-width: 0; padding: 6px 0; background: #000; color: #ffd400;
+    border: 2px solid #555; border-radius: 12px; font-size: clamp(24px, 7vw, 36px); line-height: 1;
+  }
+  .photo-layer {
+    position: fixed; inset: 0; z-index: 96; background: #000;
+    display: flex; flex-direction: column; gap: 14px;
+    padding: calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
+  }
+  .photo-layer[hidden] { display: none; }
+  .photo-layer img { flex: 1 1 auto; min-height: 0; width: 100%; object-fit: contain; }
+  #btn-photo-save { background: #1e6fd9; color: #fff; border-color: #5a9bef; padding: 12px; }
+  #btn-photo-close { background: #c4c4c4; color: #111; border-color: #a8a8a8; padding: 12px; }
   .help {
     position: fixed; inset: 0; z-index: 90;
     background: #111;
@@ -209,6 +233,11 @@
 <div class="splash" id="splash" onclick="hideSplash()">
   <img class="logo" src="assets/dp-logo.webp" alt="dPaul">
   <div class="credit">Developed by David Ahern - DPAUL 2026</div>
+</div>
+<div class="photo-layer" id="photo-layer" hidden>
+  <img id="photo" alt="Your photo">
+  <button id="btn-photo-save" onclick="savePhoto()">SAVE PHOTO</button>
+  <button id="btn-photo-close" onclick="closePhoto()">BACK TO MUSIC</button>
 </div>
 <div class="help" id="help" hidden role="dialog" aria-modal="true" aria-label="Help">
   <div class="help-inner">
@@ -263,9 +292,23 @@
       <button class="btn-radio" id="btn-gold" onclick="toggleRadio('gold')">GOLD RADIO</button>
     </div>
 
-    <button id="btn-email" onclick="openEmail()">EMAIL</button>
+    <div class="pair-row">
+      <button id="btn-camera" onclick="openCamera()">CAMERA</button>
+      <button id="btn-email" onclick="openEmail()">EMAIL</button>
+    </div>
+    <input type="file" id="camera-input" accept="image/*" capture="environment" hidden onchange="gotPhoto(this)">
 
-    <button id="btn-close" onclick="location.href='https://www.google.com'">CLOSE</button>
+    <div class="pair-row">
+      <button id="btn-feedback" onclick="toggleStars()">FEEDBACK</button>
+      <button id="btn-close" onclick="location.href='https://www.google.com'">CLOSE</button>
+    </div>
+    <div class="stars" id="stars" hidden>
+      <button onclick="rateApp(1)" aria-label="1 star">★</button>
+      <button onclick="rateApp(2)" aria-label="2 stars">★</button>
+      <button onclick="rateApp(3)" aria-label="3 stars">★</button>
+      <button onclick="rateApp(4)" aria-label="4 stars">★</button>
+      <button onclick="rateApp(5)" aria-label="5 stars">★</button>
+    </div>
 
     <div class="msg" id="msg"></div>
   </div>
@@ -784,6 +827,48 @@ document.getElementById('version').textContent =
 // button there sends an email through FormSubmit.co. The very first
 // one sent makes FormSubmit email the owner a link to switch it on.
 const HELP_EMAIL = 'davidpaulahern@gmail.com';
+
+// FEEDBACK: tap it to show five stars; picking one opens the
+// email app with that rating ready to send.
+function toggleStars() {
+  const st = document.getElementById('stars');
+  st.hidden = !st.hidden;
+}
+function rateApp(n) {
+  document.getElementById('stars').hidden = true;
+  const stars = '★'.repeat(n) + '☆'.repeat(5 - n);
+  location.href = 'mailto:' + HELP_EMAIL +
+    '?subject=' + encodeURIComponent('Electronique feedback: ' + n + ' out of 5') +
+    '&body=' + encodeURIComponent('I rate Electronique ' + stars + ' (' + n + '/5).\n\n');
+}
+
+// CAMERA: opens the phone's own camera. The photo is then shown with
+// SAVE PHOTO (the phone's share sheet, where "Save Image" puts it in
+// Photos) — browsers can't save to the camera roll by themselves.
+let photoFile = null, photoUrl = null;
+function openCamera() { document.getElementById('camera-input').click(); }
+function gotPhoto(input) {
+  const f = input.files && input.files[0];
+  input.value = '';
+  if (!f) return;
+  photoFile = f;
+  if (photoUrl) URL.revokeObjectURL(photoUrl);
+  photoUrl = URL.createObjectURL(f);
+  document.getElementById('photo').src = photoUrl;
+  document.getElementById('photo-layer').hidden = false;
+}
+async function savePhoto() {
+  if (!photoFile) return;
+  const file = new File([photoFile], 'photo-' + Date.now() + '.jpg', { type: photoFile.type || 'image/jpeg' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file] }); } catch (e) {}   // cancelled: nothing to do
+    return;
+  }
+  const a = document.createElement('a');   // no share sheet: download it instead
+  a.href = photoUrl; a.download = file.name;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+function closePhoto() { document.getElementById('photo-layer').hidden = true; }
 
 // EMAIL button: opens the phone's own email app with a new message
 function openEmail() {
