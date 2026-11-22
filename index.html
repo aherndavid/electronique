@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="1.46">
+<meta name="version" content="1.47">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -175,15 +175,15 @@
   }
   #btn-heart80s { background: #d6004f; border-color: #ff5c93; }
   #btn-gold { background: #b8860b; border-color: #e0b84a; }
-  /* EMAIL and CLOSE, set well apart from the music buttons */
-  .end-row { display: flex; gap: 12px; margin-top: 44px; }
+  /* EMAIL under the radio buttons; CLOSE on its own further down.
+     Both full width, so the same length. */
   #btn-email, #btn-close {
-    flex: 1 1 0; min-width: 0; color: #fff;
+    display: block; width: 100%; color: #fff;
     font-size: clamp(20px, 5vw, 30px); font-weight: 900; letter-spacing: 0.08em;
     padding: 8px 12px;
   }
-  #btn-email { background: #1e6fd9; border-color: #5a9bef; }
-  #btn-close { background: #7a0000; border-color: #a83232; }
+  #btn-email { background: #1e6fd9; border-color: #5a9bef; margin-top: 18px; }
+  #btn-close { background: #7a0000; border-color: #a83232; margin-top: 44px; }
   .help {
     position: fixed; inset: 0; z-index: 90;
     background: #111;
@@ -263,10 +263,9 @@
       <button class="btn-radio" id="btn-gold" onclick="toggleRadio('gold')">GOLD RADIO</button>
     </div>
 
-    <div class="end-row">
-      <button id="btn-email" onclick="openEmail()">EMAIL</button>
-      <button id="btn-close" onclick="location.href='https://www.google.com'">CLOSE</button>
-    </div>
+    <button id="btn-email" onclick="openEmail()">EMAIL</button>
+
+    <button id="btn-close" onclick="location.href='https://www.google.com'">CLOSE</button>
 
     <div class="msg" id="msg"></div>
   </div>
