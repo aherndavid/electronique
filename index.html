@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="1.54">
+<meta name="version" content="1.55">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -96,7 +96,7 @@
   .icon-btn svg { fill: currentColor; display: block; }
 
   .controls { display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 8px; margin-bottom: 18px; }
-  .controls button { height: min(clamp(110px, 28vw, 150px), 18vh); }
+  .controls button { height: min(clamp(150px, 37vw, 200px), 24vh); }
   .controls svg { width: 58%; max-width: 90px; height: auto; }
   #btn-prev, #btn-next { background: #000; color: #ff8c00; border-color: #ff8c00; }
   #btn-play { background: #ff8c00; color: #111; border-color: #ffb04d; }
@@ -189,15 +189,46 @@
     font-size: clamp(20px, 5vw, 30px); font-weight: 900; letter-spacing: 0.06em;
     padding: 8px 12px;
   }
-  #btn-close.wide-btn { margin-top: 36px; }
   .pair-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
   .pair-row button {
     display: block; width: 100%; min-width: 0; color: #fff;
     font-size: clamp(20px, 5vw, 30px); font-weight: 900; letter-spacing: 0.06em;
     padding: 8px 12px;
   }
-  #btn-camera, #btn-email, #btn-feedback { background: #000; color: #ff8c00; border-color: #ff8c00; }
-  #btn-close { background: #c62828; color: #fff; border-color: #ef5350; }
+  #btn-camera, #btn-email, #btn-rate { background: #000; color: #ff8c00; border-color: #ff8c00; }
+  #btn-close { margin: 0 auto; width: 100%; background: #c62828; color: #fff; border-color: #ef5350;
+    -webkit-text-stroke: 0; font-size: clamp(20px, 5vw, 30px); letter-spacing: 0.08em; }
+
+  /* ── Menu: RADIO / MORE, and the MORE page ── */
+  .menu-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+  .menu-btn {
+    background: #000; color: #ff8c00; border-color: #ff8c00;
+    font-size: clamp(20px, 5vw, 30px); font-weight: 900; letter-spacing: 0.06em;
+    padding: 8px 12px; min-width: 0;
+  }
+  .menu-btn::after { content: " \25BE"; }                 /* ▾ closed */
+  .menu-btn[aria-expanded="true"] { background: #ff8c00; color: #111; }
+  .menu-btn[aria-expanded="true"]::after { content: " \25B4"; }  /* ▴ open */
+  .wide-menu { display: block; width: 100%; margin-top: 8px; }
+  .menu-row .menu-btn { height: clamp(84px, 22.8vw, 110px); }   /* RADIO / MORE: double height */
+  /* MORE open: hide the music controls and RADIO; MORE becomes BACK TO MUSIC */
+  #player.more-open .controls, #player.more-open .rate,
+  #player.more-open #btn-menu-radio, #player.more-open #panel-radio { display: none; }
+  #player.more-open .menu-row { grid-template-columns: 1fr; }
+  #player.more-open #btn-menu-more { height: auto; padding: 12px; }
+  #btn-menu-more[aria-expanded="true"]::after { content: none; }
+  .panel { margin-top: 8px; padding: 10px; border: 2px solid #333; border-radius: 18px; background: #1a1a1a; }
+  .panel[hidden] { display: none; }
+  .panel .radio-row, .panel .pair-row { margin-top: 0; }
+  #panel-more .wide-menu { margin-top: 8px; }
+  #panel-howto { margin-top: 10px; }
+  #panel-howto[hidden] { display: none; }
+  .howto { text-align: left; font-size: clamp(17px, 4.4vw, 24px); line-height: 1.35; }
+  .howto h2 { font-size: clamp(20px, 5vw, 28px); color: #ff8c00; margin: 4px 0 6px; }
+  .howto p { margin-bottom: 10px; color: #ddd; }
+  #btn-feedback { background: #ff8c00; color: #111; border-color: #ffb04d; margin: 4px 0 10px; }
+  .howto .howto-version { text-align: right; color: #888; font-size: 15px; margin: 0; }
+  #version { display: none; }   /* the version now lives in HOW TO USE */
   .stars { display: flex; gap: 8px; margin-top: 10px; }
   .stars[hidden] { display: none; }
   .stars button {
@@ -292,34 +323,57 @@
       </button>
     </div>
 
-    <div class="radio-row">
-      <button class="btn-radio" id="btn-heart80s" onclick="toggleRadio('heart80s')">HEART 80s</button>
-      <button class="btn-radio" id="btn-gold" onclick="toggleRadio('gold')">GOLD RADIO</button>
+    <!-- Menu: RADIO and MORE side by side. RADIO opens the stations
+         underneath. MORE swaps the player for a page of extras (the
+         controls and RADIO hide); its button becomes BACK TO MUSIC. -->
+    <div class="menu-row">
+      <button class="menu-btn" id="btn-menu-radio" onclick="toggleRadioPanel()" aria-expanded="false" aria-controls="panel-radio">RADIO</button>
+      <button class="menu-btn" id="btn-menu-more" onclick="toggleMore()" aria-expanded="false" aria-controls="panel-more">MORE</button>
     </div>
 
-    <div class="pair-row">
-      <button id="btn-camera" onclick="openCamera()">CAMERA</button>
-      <button id="btn-email" onclick="openEmail()">EMAIL</button>
+    <div class="panel" id="panel-radio" hidden>
+      <div class="radio-row">
+        <button class="btn-radio" id="btn-heart80s" onclick="toggleRadio('heart80s')">HEART 80s</button>
+        <button class="btn-radio" id="btn-gold" onclick="toggleRadio('gold')">GOLD RADIO</button>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-more" hidden>
+      <div class="pair-row">
+        <button id="btn-camera" onclick="openCamera()">CAMERA</button>
+        <button id="btn-email" onclick="openEmail()">EMAIL</button>
+      </div>
+      <button id="btn-rate" class="wide-btn" onclick="toggleStars()">RATE APP</button>
+      <div class="stars" id="stars" hidden>
+        <button onclick="rateApp(1)" aria-label="1 star">★</button>
+        <button onclick="rateApp(2)" aria-label="2 stars">★</button>
+        <button onclick="rateApp(3)" aria-label="3 stars">★</button>
+        <button onclick="rateApp(4)" aria-label="4 stars">★</button>
+        <button onclick="rateApp(5)" aria-label="5 stars">★</button>
+      </div>
+
+      <button class="menu-btn wide-menu" id="btn-menu-howto" onclick="toggleHowto()" aria-expanded="false" aria-controls="panel-howto">HOW TO USE</button>
+      <div class="howto" id="panel-howto" hidden>
+        <h2>Thumbs</h2>
+        <p><b>Thumbs up</b> — you like this song. Liked songs play first each time you open the music. Tap it again to undo.</p>
+        <p><b>Thumbs down</b> — you don't like this song. It skips straight away and won't play again.</p>
+        <p>Your thumbs are remembered on this phone only.</p>
+        <h2>Buttons</h2>
+        <p><b>RADIO</b> — live 80s stations. Tap a station to listen; tap <b>BACK TO MUSIC</b> to return to your songs.</p>
+        <p><b>MORE</b> — camera, email, rate the app and this help. Tap <b>BACK TO MUSIC</b> to get the music buttons back.</p>
+        <button id="btn-feedback" class="wide-btn" onclick="sendFeedback()">SEND FEEDBACK</button>
+        <p class="howto-version" id="howto-version"></p>
+      </div>
     </div>
     <input type="file" id="camera-input" accept="image/*" capture="environment" hidden onchange="gotPhoto(this)">
-
-    <button id="btn-feedback" class="wide-btn" onclick="toggleStars()">FEEDBACK</button>
-    <div class="stars" id="stars" hidden>
-      <button onclick="rateApp(1)" aria-label="1 star">★</button>
-      <button onclick="rateApp(2)" aria-label="2 stars">★</button>
-      <button onclick="rateApp(3)" aria-label="3 stars">★</button>
-      <button onclick="rateApp(4)" aria-label="4 stars">★</button>
-      <button onclick="rateApp(5)" aria-label="5 stars">★</button>
-    </div>
-
-    <!-- CLOSE: on its own, further down, full width -->
-    <button id="btn-close" class="wide-btn" onclick="location.href='https://www.google.com'">CLOSE</button>
 
     <div class="msg" id="msg"></div>
   </div>
 
   <div class="back-bar" id="back-bar">
     <button id="btn-controls" onclick="showPlayer()" hidden>BACK TO CONTROLS</button>
+    <!-- CLOSE: pinned to the bottom so it never moves (player screen only) -->
+    <button id="btn-close" onclick="location.href='https://www.google.com'" hidden>CLOSE</button>
     <div class="version" id="version"></div>
   </div>
 
@@ -688,11 +742,18 @@ function openAlbum(i, autoplay = true) {
   loadTrack(0, autoplay);
 }
 
+// CLOSE shows on the player screen, except while HOW TO USE is open
+function updateClose() {
+  document.getElementById('btn-close').hidden =
+    document.getElementById('player').hidden || !document.getElementById('panel-howto').hidden;
+  fitBackBar();
+}
+
 function showPicker() {
   document.getElementById('player').hidden = true;
   document.getElementById('picker').hidden = false;
   document.getElementById('btn-controls').hidden = !album;   // only once something is loaded
-  fitBackBar();
+  updateClose();
   window.scrollTo(0, 0);
 }
 
@@ -700,7 +761,7 @@ function showPlayer() {
   document.getElementById('picker').hidden = true;
   document.getElementById('player').hidden = false;
   document.getElementById('btn-controls').hidden = true;
-  fitBackBar();
+  updateClose();
   window.scrollTo(0, 0);
 }
 
@@ -875,7 +936,42 @@ document.getElementById('version').textContent =
 // one sent makes FormSubmit email the owner a link to switch it on.
 const HELP_EMAIL = 'davidpaulahern@gmail.com';
 
-// FEEDBACK: tap it to show five stars; picking one opens the
+// ── Menu: RADIO opens the stations underneath; MORE swaps the
+// player buttons for the extras page, and back again ──
+function setOpen(btnId, panelId, open) {
+  document.getElementById(panelId).hidden = !open;
+  document.getElementById(btnId).setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+function toggleRadioPanel() {
+  setOpen('btn-menu-radio', 'panel-radio', document.getElementById('panel-radio').hidden);
+}
+function toggleMore() {
+  const open = document.getElementById('panel-more').hidden;
+  setOpen('btn-menu-more', 'panel-more', open);
+  document.getElementById('player').classList.toggle('more-open', open);
+  document.getElementById('btn-menu-more').textContent = open ? 'BACK TO MUSIC' : 'MORE';
+  if (open) setOpen('btn-menu-radio', 'panel-radio', false);
+  else { document.getElementById('stars').hidden = true; setOpen('btn-menu-howto', 'panel-howto', false); }
+  updateClose();
+  window.scrollTo(0, 0);
+}
+function toggleHowto() {
+  const open = document.getElementById('panel-howto').hidden;
+  setOpen('btn-menu-howto', 'panel-howto', open);
+  updateClose();
+  if (open) document.getElementById('panel-howto').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// SEND FEEDBACK (in HOW TO USE): a new email with the version filled in
+function sendFeedback() {
+  const v = document.querySelector('meta[name="version"]')?.content || '';
+  location.href = 'mailto:' + HELP_EMAIL +
+    '?subject=' + encodeURIComponent('Electronique feedback (v' + v + ')');
+}
+document.getElementById('howto-version').textContent =
+  'Version ' + (document.querySelector('meta[name="version"]')?.content || '');
+
+// RATE APP: tap it to show five stars; picking one opens the
 // email app with that rating ready to send.
 function toggleStars() {
   const st = document.getElementById('stars');
@@ -885,7 +981,7 @@ function rateApp(n) {
   document.getElementById('stars').hidden = true;
   const stars = '★'.repeat(n) + '☆'.repeat(5 - n);
   location.href = 'mailto:' + HELP_EMAIL +
-    '?subject=' + encodeURIComponent('Electronique feedback: ' + n + ' out of 5') +
+    '?subject=' + encodeURIComponent('Electronique rating: ' + n + ' out of 5') +
     '&body=' + encodeURIComponent('I rate Electronique ' + stars + ' (' + n + '/5).\n\n');
 }
 
