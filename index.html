@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="1.56">
+<meta name="version" content="1.57">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -113,9 +113,12 @@
   .rate { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .rate button { background: #3a3a3a; color: #cfcfcf; border-color: #555; height: min(clamp(50px, 12vw, 66px), 7.5vh); }
   .rate svg { width: clamp(32px, 8.5vw, 46px); height: auto; }
-  /* Grey until pressed; pressing one hides the other until the next song */
-  #btn-like.on { background: #e8e8e8; color: #111; border-color: #fff; }
-  #btn-dislike.on { background: #7a7a7a; color: #111; }
+  /* Green up / red down; pressing one hides the other until the next song */
+  #btn-like    { background: #2e7d32; color: #fff; border-color: #66bb6a; }
+  #btn-dislike { background: #c62828; color: #fff; border-color: #ef5350; }
+  /* Pressed: brighter, with a white edge */
+  #btn-like.on    { background: #43c84a; color: #fff; border-color: #fff; }
+  #btn-dislike.on { background: #ff3b30; color: #fff; border-color: #fff; }
   .rate button.gone { visibility: hidden; }
 
 
