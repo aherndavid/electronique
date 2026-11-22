@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="version" content="1.37">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#111111">
+<link rel="icon" href="favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<title>Music</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { min-height: 100%; }
+  body {
+    background: #111;
+    color: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: clamp(20px, 5vw, 28px);
+    padding: 16px 16px 24px;
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap { width: 100%; max-width: 820px; margin: 0 auto; }
+
+  h1 { font-size: clamp(30px, 8vw, 44px); text-align: center; margin: 8px 0 20px; }
+
+  button {
+    font-family: inherit;
+    font-weight: bold;
+    font-size: clamp(24px, 6.5vw, 36px);
+    color: #111;
+    background: #ffd400;
+    border: 4px solid #fff;
+    border-radius: 18px;
+    padding: 20px 12px;
+    width: 100%;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  button:active { filter: brightness(0.8); }
+  button:focus-visible { outline: 6px solid #4fc3ff; outline-offset: 4px; }
+
+  /* ── Album picker ── */
+  .albums { display: grid; gap: 18px; }
+  .album-btn {
+    display: flex; align-items: center; gap: 18px;
+    text-align: left; background: #fff;
+    padding: 14px 18px; min-height: 110px;
+  }
+  .album-btn img { width: 90px; height: 90px; object-fit: cover; border-radius: 10px; flex-shrink: 0; }
+
+  /* ── Player ── */
+  /* Big cover centred at the top, titles underneath. Sized by screen
+     height too, so the buttons still fit without scrolling. */
+  .now { display: flex; flex-direction: column; align-items: center; gap: 14px; margin-bottom: 20px; }
+  /* Fixed-size box: its space is kept even while the picture loads
+     or when a song has none, so the buttons never jump. */
+  .now .art { width: min(50vw, 21vh, 250px); height: min(50vw, 21vh, 250px); border-radius: 14px; background: #222; overflow: hidden; flex-shrink: 0; }
+  .now .art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .now .art img[hidden] { display: none; }
+  .now-text { text-align: center; min-width: 0; width: 100%; }
+  /* Always two lines tall, whether the name is short or long */
+  .now .track {
+    font-size: clamp(26px, 7vw, 40px); font-weight: bold; line-height: 1.2; height: 2.4em;
+    word-break: break-word; overflow: hidden;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+  .now .track .year { color: #ffd400; white-space: nowrap; }
+  .now .count { font-size: clamp(18px, 4.5vw, 26px); color: #ccc; margin-top: 8px; }
+
+  /* Previous / Play / Next stay in one row, even on a phone */
+  /* Icon buttons: plain drawn shapes, no text */
+  .icon-btn { display: flex; align-items: center; justify-content: center; padding: 0; color: #111; }
+  .icon-btn svg { fill: currentColor; display: block; }
+
+  .controls { display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 12px; margin-bottom: 18px; }
+  .controls button { height: min(clamp(110px, 28vw, 150px), 18vh); }
+  .controls svg { width: 58%; max-width: 90px; height: auto; }
+  #btn-prev, #btn-next { background: #ff8c00; }
+  #btn-play { background: #3ddc84; }
+  #btn-play svg { width: 46%; max-width: 80px; }
+  #btn-play.playing { background: #ff6b6b; }
+
+  /* Thumbs down / thumbs up */
+  .rate { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .rate button { background: #ddd; height: min(clamp(50px, 12vw, 66px), 7.5vh); }
+  .rate svg { width: clamp(32px, 8.5vw, 46px); height: auto; }
+  /* Grey until pressed; pressing one hides the other until the next song */
+  #btn-like.on { background: #4fc3ff; }
+  #btn-dislike.on { background: #ff6b6b; }
+  .rate button.gone { visibility: hidden; }
+
+
+  .msg { text-align: center; font-size: clamp(20px, 5vw, 28px); margin-top: 16px; color: #ff6b6b; }
+
+  /* Big Back button, pinned to the bottom of the screen */
+  .back-bar {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    padding: 10px 16px calc(8px + env(safe-area-inset-bottom));
+    background: #111;
+    border-top: 3px solid #333;
+    z-index: 10;
+  }
+  .back-bar button, .back-bar a {
+    max-width: 820px; margin: 0 auto; display: block;
+    text-align: center; text-decoration: none; color: #111;
+    border: 4px solid #fff; border-radius: 18px;
+    font-family: inherit;
+    background: #4fc3ff;
+    font-size: clamp(20px, 5vw, 28px);
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    -webkit-text-stroke: 1px #111;
+    padding: 8px 12px;
+  }
+  .back-bar > button + *, .back-bar > a + * { margin-top: 22px; }
+  .version {
+    max-width: 820px; margin: 6px auto 0 !important;
+    text-align: right; font-size: 13px; color: #777;
+  }
+  .back-bar [hidden] { display: none; }
+  /* No buttons showing: just the version number, no bar */
+  .back-bar.only-version { background: transparent; border-top: none; padding-top: 0; pointer-events: none; }
+
+  /* ── Splash screen ── */
+  .splash {
+    position: fixed; inset: 0; z-index: 100;
+    background: #111;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; padding: 24px; text-align: center;
+    transition: opacity 0.6s ease;
+  }
+  .splash.fade { opacity: 0; pointer-events: none; }
+  .splash .logo { width: min(60vw, 45vh, 320px); height: auto; display: block; }
+  .splash .credit {
+    position: absolute; left: 16px; right: 16px;
+    bottom: calc(24px + env(safe-area-inset-bottom));
+    font-size: clamp(15px, 3.8vw, 20px); color: #888;
+  }
+
+  /* ── HELP button (top of every screen) and help screen ── */
+  #btn-help {
+    background: #ff3b30; color: #fff; border-color: #fff;
+    font-size: clamp(22px, 5.5vw, 30px); font-weight: 900; letter-spacing: 0.08em;
+    padding: 8px 12px; margin-bottom: 14px;
+  }
+  .radio-row { display: flex; gap: 12px; margin-top: 18px; }
+  .btn-radio {
+    flex: 1 1 0; min-width: 0; background: #1e6fd9; color: #fff; border-color: #fff;
+    font-size: clamp(15px, 3.8vw, 26px); font-weight: 900; letter-spacing: 0.04em; line-height: 1.15;
+    padding: 8px 6px;
+  }
+  #btn-smooth { background: #8e1f6e; }
+  #btn-close {
+    display: block; width: 100%; margin-top: 18px; background: #a00000; color: #fff; border-color: #fff;
+    font-size: clamp(22px, 5.5vw, 30px); font-weight: 900; letter-spacing: 0.08em;
+    padding: 8px 12px;
+  }
+  .help {
+    position: fixed; inset: 0; z-index: 90;
+    background: #111;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+    text-align: center;
+  }
+  .help[hidden] { display: none; }
+  .help .help-inner { width: 100%; max-width: 820px; display: flex; flex-direction: column; gap: 22px; }
+  #btn-send-help {
+    background: #ff3b30; color: #fff;
+    font-size: clamp(30px, 8.5vw, 48px); font-weight: 900; line-height: 1.2;
+    min-height: 40vh;
+  }
+  #btn-send-help:disabled { cursor: default; }
+  #btn-send-help.sent { background: #3ddc84; color: #111; }
+  .help .help-status { font-size: clamp(22px, 5.5vw, 30px); min-height: 1.4em; color: #ccc; }
+  .help .help-status a { color: #4fc3ff; }
+  #btn-help-close { background: #ddd; }
+</style>
+</head>
+<body>
+<div class="splash" id="splash" onclick="hideSplash()">
+  <img class="logo" src="assets/dp-logo.webp" alt="dPaul">
+  <div class="credit">Developed by David Ahern - DPAUL 2026</div>
+</div>
+<div class="help" id="help" hidden role="dialog" aria-modal="true" aria-label="Help">
+  <div class="help-inner">
+    <button id="btn-send-help" onclick="sendHelp()">EMERGENCY ONLY</button>
+    <div class="help-status" id="help-status" aria-live="polite"></div>
+    <button id="btn-help-close" onclick="closeHelp()">GO BACK</button>
+  </div>
+</div>
+<div class="wrap">
+
+  <button id="btn-help" onclick="openHelp()">HELP</button>
+
+  <!-- Screen 1: pick an album -->
+  <div id="picker">
+    <h1>Choose an Album</h1>
+    <div class="albums" id="album-list"></div>
+  </div>
+
+  <!-- Screen 2: play it -->
+  <div id="player" hidden>
+    <div class="now">
+      <div class="art"><img id="cover" alt="" hidden></div>
+      <div class="now-text">
+        <div class="track" id="track-name"></div>
+        <div class="count" id="track-count"></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="icon-btn" id="btn-prev" onclick="prevTrack()" aria-label="Previous song">
+        <svg viewBox="0 0 100 60"><polygon points="50,0 50,60 0,30"/><polygon points="100,0 100,60 50,30"/></svg>
+      </button>
+      <button class="icon-btn" id="btn-play" onclick="togglePlay()" aria-label="Play"></button>
+      <button class="icon-btn" id="btn-next" onclick="nextTrack()" aria-label="Next song">
+        <svg viewBox="0 0 100 60"><polygon points="0,0 0,60 50,30"/><polygon points="50,0 50,60 100,30"/></svg>
+      </button>
+    </div>
+
+    <div class="rate">
+      <button class="icon-btn" id="btn-dislike" onclick="dislikeSong()" aria-label="Don't like this song – skip it and never play it again">
+        <svg viewBox="0 0 24 24"><g transform="rotate(180 12 12)"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></g></svg>
+      </button>
+      <button class="icon-btn" id="btn-like" onclick="toggleLike()" aria-label="Like this song" aria-pressed="false">
+        <svg viewBox="0 0 24 24"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg>
+      </button>
+    </div>
+
+    <div class="radio-row">
+      <button class="btn-radio" id="btn-lbc" onclick="toggleRadio('lbc')">LBC RADIO</button>
+      <button class="btn-radio" id="btn-smooth" onclick="toggleRadio('smooth')">SMOOTH RADIO</button>
+    </div>
+
+    <button id="btn-close" onclick="location.href='https://www.google.com'">CLOSE</button>
+
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="back-bar" id="back-bar">
+    <button id="btn-controls" onclick="showPlayer()" hidden>BACK TO CONTROLS</button>
+    <div class="version" id="version"></div>
+  </div>
+
+  <audio id="audio" preload="auto" playsinline></audio>
+</div>
+
+<script>
+/* ─────────────────────────────────────────────────────────────
+   ALBUMS — edit this list to match the folders in /albums.
+
+   "folder" is the folder name inside /albums.
+   "tracks" is the list of MP3 file names, in play order.
+   Album art: the picture embedded in each MP3 is shown. If a song has
+   none, "cover.jpg" in the album folder is used (or name another file
+   with cover: "front.png").
+   "years" gives the year each song first came out, shown next to
+   its name. Songs left out simply show no year.
+   ───────────────────────────────────────────────────────────── */
+const ALBUMS = [
+  {
+    title: "Mixed",
+    folder: "songs",
+    tracks: [
+      "Are Friends Electric.mp3",
+      "Bedsitter.mp3",
+      "Being Boiled.mp3",
+      "Bizarre Love Triangle.mp3",
+      "Blue Monday.mp3",
+      "Cars (Premier Mix).mp3",
+      "Computer World 2.mp3",
+      "Don_t Go.mp3",
+      "Don_t You Want Me.mp3",
+      "Electricity.mp3",
+      "Enola Gay.mp3",
+      "Everything Counts.mp3",
+      "Fade to Grey.mp3",
+      "Girls On Film.mp3",
+      "Hungry Like The Wolf.mp3",
+      "I Die You Die.mp3",
+      "Is There Something I Should Know.mp3",
+      "Just Can_t Get Enough.mp3",
+      "Let Me Go.mp3",
+      "Living On The Ceiling.mp3",
+      "Love Action (I Believe In Love).mp3",
+      "Mad World.mp3",
+      "Metal.mp3",
+      "Mind of a Toy.mp3",
+      "Mirror Man.mp3",
+      "New Europeans.mp3",
+      "New Life.mp3",
+      "New Moon On Monday.mp3",
+      "Only You.mp3",
+      "Play to Win.mp3",
+      "See You.mp3",
+      "Sleepwalk.mp3",
+      "Souvenir.mp3",
+      "Space Age Love Song.mp3",
+      "Tainted Love.mp3",
+      "Talking Drum.mp3",
+      "Telecommunication.mp3",
+      "Telegraph.mp3",
+      "Temptation.mp3",
+      "The Damned Don_t Cry.mp3",
+      "The Model.mp3",
+      "The Perfect Kiss.mp3",
+      "The Reflex.mp3",
+      "The Wild Boys.mp3",
+      "Too Shy.mp3",
+      "Torch.mp3",
+      "Vienna.mp3",
+      "Visions Of China.mp3",
+      "West End Girls.mp3",
+      "Why.mp3"
+    ],
+    years: {
+      "Are Friends Electric.mp3": 1979,
+      "Bedsitter.mp3": 1981,
+      "Being Boiled.mp3": 1978,
+      "Bizarre Love Triangle.mp3": 1986,
+      "Blue Monday.mp3": 1983,
+      "Cars (Premier Mix).mp3": 1979,
+      "Computer World 2.mp3": 1981,
+      "Don_t Go.mp3": 1982,
+      "Don_t You Want Me.mp3": 1981,
+      "Electricity.mp3": 1979,
+      "Enola Gay.mp3": 1980,
+      "Everything Counts.mp3": 1983,
+      "Fade to Grey.mp3": 1980,
+      "Girls On Film.mp3": 1981,
+      "Hungry Like The Wolf.mp3": 1982,
+      "I Die You Die.mp3": 1980,
+      "Is There Something I Should Know.mp3": 1983,
+      "Just Can_t Get Enough.mp3": 1981,
+      "Let Me Go.mp3": 1982,
+      "Living On The Ceiling.mp3": 1982,
+      "Love Action (I Believe In Love).mp3": 1981,
+      "Mad World.mp3": 1982,
+      "Metal.mp3": 1979,
+      "Mind of a Toy.mp3": 1981,
+      "Mirror Man.mp3": 1982,
+      "New Europeans.mp3": 1980,
+      "New Life.mp3": 1981,
+      "New Moon On Monday.mp3": 1984,
+      "Only You.mp3": 1982,
+      "Play to Win.mp3": 1981,
+      "See You.mp3": 1982,
+      "Sleepwalk.mp3": 1980,
+      "Souvenir.mp3": 1981,
+      "Space Age Love Song.mp3": 1982,
+      "Tainted Love.mp3": 1981,
+      "Talking Drum.mp3": 1981,
+      "Telecommunication.mp3": 1981,
+      "Telegraph.mp3": 1983,
+      "Temptation.mp3": 1983,
+      "The Damned Don_t Cry.mp3": 1982,
+      "The Model.mp3": 1978,
+      "The Perfect Kiss.mp3": 1985,
+      "The Reflex.mp3": 1984,
+      "The Wild Boys.mp3": 1984,
+      "Too Shy.mp3": 1983,
+      "Torch.mp3": 1982,
+      "Vienna.mp3": 1980,
+      "Visions Of China.mp3": 1981,
+      "West End Girls.mp3": 1985,
+      "Why.mp3": 1984
+    }
+  }
+];
+
+const PLAY_ICON  = '<svg viewBox="0 0 52 60"><polygon points="0,0 0,60 52,30"/></svg>';
+const PAUSE_ICON = '<svg viewBox="0 0 52 60"><rect x="0" y="0" width="18" height="60" rx="2"/><rect x="34" y="0" width="18" height="60" rx="2"/></svg>';
+
+const audio = document.getElementById('audio');
+const playBtn = document.getElementById('btn-play');
+const msg = document.getElementById('msg');
+
+let album = null;
+let trackIndex = 0;   // position in the shuffled play order
+let order = [];       // album.tracks indexes, shuffled each time an album opens
+
+// ── Thumbs up / down ──
+// Saved on this phone/tablet only. 1 = liked, -1 = disliked.
+let ratings = {};
+try { ratings = JSON.parse(localStorage.getItem('ratings')) || {}; } catch (e) {}
+function saveRatings() { try { localStorage.setItem('ratings', JSON.stringify(ratings)); } catch (e) {} }
+function ratingKey(file) { return album.folder + '/' + file; }
+function ratingOf(file) { return ratings[ratingKey(file)] || 0; }
+
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// Liked songs first (shuffled), then the rest (shuffled).
+// Disliked songs are left out altogether.
+function shuffledOrder() {
+  const idx = album.tracks.map((_, i) => i);
+  const liked = idx.filter(i => ratingOf(album.tracks[i]) > 0);
+  const other = idx.filter(i => ratingOf(album.tracks[i]) === 0);
+  const result = shuffle(liked).concat(shuffle(other));
+  if (result.length) return result;
+  // Every song disliked — forget those dislikes rather than play nothing
+  album.tracks.forEach(f => delete ratings[ratingKey(f)]);
+  saveRatings();
+  return shuffle(idx);
+}
+
+function toggleLike() {
+  if (!album) return;
+  const k = ratingKey(currentFile());
+  if (ratings[k] > 0) delete ratings[k]; else ratings[k] = 1;
+  saveRatings();
+  updateLikeButton();
+}
+
+function dislikeSong() {
+  if (!album) return;
+  ratings[ratingKey(currentFile())] = -1;
+  saveRatings();
+  // Show it pressed (and thumbs up gone) for a moment, then skip
+  document.getElementById('btn-dislike').classList.add('on');
+  document.getElementById('btn-like').classList.add('gone');
+  document.querySelectorAll('.rate button').forEach(b => b.disabled = true);
+  const file = currentFile();
+  setTimeout(() => skipDisliked(file), 600);
+}
+
+function skipDisliked(file) {
+  document.querySelectorAll('.rate button').forEach(b => b.disabled = false);
+  if (currentFile() !== file) {                // moved on meanwhile: just drop it from the list
+    const pos = order.findIndex(i => album.tracks[i] === file);
+    if (pos >= 0) { order.splice(pos, 1); if (pos < trackIndex) trackIndex--; }
+    if (!order.length) { order = shuffledOrder(); trackIndex = 0; }
+    document.getElementById('track-count').textContent =
+      'Song ' + (trackIndex + 1) + ' of ' + order.length;
+    return;
+  }
+  order.splice(trackIndex, 1);                 // never comes round again
+  if (!order.length) order = shuffledOrder();
+  if (trackIndex >= order.length) trackIndex = 0;
+  loadTrack(trackIndex, true);                 // skip straight to the next one
+}
+
+function updateLikeButton() {
+  const liked = album && ratingOf(currentFile()) > 0;
+  const btn = document.getElementById('btn-like');
+  btn.classList.toggle('on', !!liked);
+  btn.classList.remove('gone');
+  btn.setAttribute('aria-pressed', liked ? 'true' : 'false');
+  const down = document.getElementById('btn-dislike');
+  down.classList.remove('on');
+  down.classList.toggle('gone', !!liked);   // thumbs up pressed: thumbs down hides
+}
+
+function currentFile() { return album.tracks[order[trackIndex]]; }
+
+function fileUrl(folder, file) {
+  return encodeURIComponent(folder) + '/' + encodeURIComponent(file);
+}
+
+// Display name: drop ".mp3", " copy", a leading track number, tidy underscores
+function niceName(file) {
+  return file
+    .replace(/\.mp3$/i, '')
+    .replace(/\s+copy(\s+\d+)?$/i, '')
+    .replace(/\s*\(\d+\)$/, '')
+    .replace(/^\d{1,3}\s*[-.]?\s*/, '')
+    .replace(/_t\b/g, "'t").replace(/_s\b/g, "'s")
+    .replace(/_/g, ' ');
+}
+
+function buildPicker() {
+  const list = document.getElementById('album-list');
+  list.innerHTML = '';
+  ALBUMS.forEach((a, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'album-btn';
+    btn.onclick = () => openAlbum(i);
+    const img = document.createElement('img');
+    img.src = fileUrl(a.folder, a.cover || 'cover.jpg');
+    img.alt = '';
+    img.onerror = () => img.remove();   // no cover image? just the name
+    btn.appendChild(img);
+    const label = document.createElement('span');
+    label.textContent = a.title;
+    btn.appendChild(label);
+    list.appendChild(btn);
+  });
+}
+
+function openAlbum(i, autoplay = true) {
+  if (album === ALBUMS[i]) { showPlayer(); return; }
+  album = ALBUMS[i];
+  order = shuffledOrder();   // a different song first each time
+
+
+  showPlayer();
+  loadTrack(0, autoplay);
+}
+
+function showPicker() {
+  document.getElementById('player').hidden = true;
+  document.getElementById('picker').hidden = false;
+  document.getElementById('btn-controls').hidden = !album;   // only once something is loaded
+  fitBackBar();
+  window.scrollTo(0, 0);
+}
+
+function showPlayer() {
+  document.getElementById('picker').hidden = true;
+  document.getElementById('player').hidden = false;
+  document.getElementById('btn-controls').hidden = true;
+  fitBackBar();
+  window.scrollTo(0, 0);
+}
+
+function loadTrack(i, autoplay) {
+  if (!album || !order.length) return;
+  trackIndex = (i + order.length) % order.length;
+  setRadioMode(false);
+  const file = currentFile();
+  audio.src = fileUrl(album.folder, file);
+  showArt(file);
+  const nameEl = document.getElementById('track-name');
+  nameEl.textContent = niceName(file);
+  const year = album.years && album.years[file];
+  if (year) {
+    const y = document.createElement('span');
+    y.className = 'year';
+    y.textContent = ' (' + year + ')';
+    nameEl.appendChild(y);
+  }
+  document.getElementById('track-count').textContent =
+    'Song ' + (trackIndex + 1) + ' of ' + order.length;
+  updateLikeButton();
+  msg.textContent = '';
+  if (autoplay) play(); else updatePlayButton();
+}
+
+// ── Album art ──
+// Picture embedded in the MP3 first; failing that the album's cover
+// image (cover.jpg unless the ALBUMS list names another); failing that,
+// nothing — the page simply has no picture.
+const coverEl = document.getElementById('cover');
+let artToken = 0;
+
+function setArt(src) {
+  if (!src) { coverEl.hidden = true; coverEl.removeAttribute('src'); return; }
+  coverEl.onerror = () => { coverEl.hidden = true; };
+  coverEl.onload = () => { coverEl.hidden = false; };
+  coverEl.src = src;
+  updateMediaSession(src);
+}
+
+function bytesToDataUrl(pic) {
+  let bin = '';
+  const bytes = pic.data;
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    bin += String.fromCharCode.apply(null, bytes.slice(i, i + 0x8000));
+  }
+  return 'data:' + (pic.format || 'image/jpeg') + ';base64,' + btoa(bin);
+}
+
+function showArt(file) {
+  const token = ++artToken;
+  const albumCover = fileUrl(album.folder, album.cover || 'cover.jpg');
+  coverEl.hidden = true;
+  updateMediaSession(null);
+
+  if (!window.jsmediatags) { setArt(albumCover); return; }
+  const url = new URL(fileUrl(album.folder, file), location.href).href;
+  window.jsmediatags.read(url, {
+    onSuccess: tag => {
+      if (token !== artToken) return;          // song changed meanwhile
+      const pic = tag.tags && tag.tags.picture;
+      setArt(pic && pic.data && pic.data.length ? bytesToDataUrl(pic) : albumCover);
+    },
+    onError: () => { if (token === artToken) setArt(albumCover); }
+  });
+}
+
+// Song, album and picture on the lock screen
+function updateMediaSession(artSrc) {
+  if (!('mediaSession' in navigator) || !album || radio) return;
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: niceName(currentFile()),
+    album: album.title,
+    artwork: artSrc ? [{ src: artSrc, sizes: '512x512' }] : []
+  });
+}
+
+// ── Radio stations ──
+// Plays a live stream through the same player, so music and radio
+// never play at once. Tapping the playing station's button again (or
+// a skip button) goes back to the songs.
+const STATIONS = {
+  lbc:    { name: 'LBC Radio',    label: 'LBC RADIO',    url: 'https://media-ssl.musicradio.com/LBCUKMP3',    art: 'assets/lbc.jpg' },
+  smooth: { name: 'Smooth Radio', label: 'SMOOTH RADIO', url: 'https://media-ssl.musicradio.com/SmoothUKMP3', art: 'assets/smooth.svg' }
+};
+let radio = null;                              // key of the station playing, or null for music
+
+function setRadioMode(key) {
+  radio = key || null;
+  for (const k in STATIONS) {
+    document.getElementById('btn-' + k).textContent = radio === k ? 'BACK TO MUSIC' : STATIONS[k].label;
+  }
+  document.querySelector('.rate').style.visibility = radio ? 'hidden' : '';
+}
+
+function toggleRadio(key) {
+  if (radio === key) { loadTrack(trackIndex, true); return; }
+  const st = STATIONS[key];
+  setRadioMode(key);
+  artToken++;                                  // ignore any song picture still loading
+  setArt(st.art);
+  document.getElementById('track-name').textContent = st.name;
+  document.getElementById('track-count').textContent = 'Live';
+  msg.textContent = '';
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: st.name, album: 'Live',
+      artwork: [{ src: new URL(st.art, location.href).href }]
+    });
+  }
+  audio.src = st.url;
+  play();
+}
+
+function play() {
+  // Live radio: reconnect so it carries on from now, not from the pause
+  if (radio && audio.paused) audio.src = STATIONS[radio].url;
+  // Phones sometimes block sound until a button is pressed — if so,
+  // the PLAY button is left showing so one tap starts it.
+  audio.play().catch(updatePlayButton);
+}
+
+function togglePlay() { if (audio.paused) play(); else audio.pause(); }
+function nextTrack() { loadTrack(radio ? trackIndex : trackIndex + 1, true); }
+
+function prevTrack() {
+  // A few seconds in, Prev restarts the song, like a CD player
+  if (radio) { loadTrack(trackIndex, true); return; }
+  if (audio.currentTime > 5) { audio.currentTime = 0; return; }
+  loadTrack(trackIndex - 1, true);
+}
+
+
+function updatePlayButton() {
+  const playing = !audio.paused;
+  playBtn.innerHTML = playing ? PAUSE_ICON : PLAY_ICON;
+  playBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+  playBtn.classList.toggle('playing', playing);
+}
+
+audio.addEventListener('play', updatePlayButton);
+audio.addEventListener('pause', updatePlayButton);
+audio.addEventListener('ended', () => {
+  if (radio) { updatePlayButton(); return; }
+  if (trackIndex < order.length - 1) nextTrack();
+  else updatePlayButton();
+});
+audio.addEventListener('error', () => {
+  msg.textContent = radio ? STATIONS[radio].name + ' could not be reached.' : 'This song could not be found.';
+  updatePlayButton();
+});
+
+// Lock-screen / headphone controls on phones
+if ('mediaSession' in navigator) {
+  navigator.mediaSession.setActionHandler('play', play);
+  navigator.mediaSession.setActionHandler('pause', () => audio.pause());
+  navigator.mediaSession.setActionHandler('nexttrack', nextTrack);
+  navigator.mediaSession.setActionHandler('previoustrack', prevTrack);
+}
+
+// Keep page content clear of the bottom bar, whatever is showing in it
+function fitBackBar() {
+  const bar = document.getElementById('back-bar');
+  const empty = [...bar.children].every(el => el.hidden || el.id === 'version');
+  bar.classList.toggle('only-version', empty);
+  document.body.style.paddingBottom = (bar.offsetHeight + 16) + 'px';
+}
+window.addEventListener('resize', fitBackBar);
+
+// Version number lives in the <meta name="version"> tag at the top
+document.getElementById('version').textContent =
+  'v' + (document.querySelector('meta[name="version"]')?.content || '');
+
+// ── HELP ──
+// Pressing HELP stops the music and shows the help screen. The big
+// button there sends an email through FormSubmit.co. The very first
+// one sent makes FormSubmit email the owner a link to switch it on.
+const HELP_EMAIL = 'davidpaulahern@gmail.com';
+let helpSending = false;
+let helpLocation = null;   // Promise of { link, accuracy } or { error }
+
+// Asks the phone where it is. The phone may ask "Allow location?" the
+// first time. Never rejects: gives back either a place or a reason.
+function findLocation() {
+  return new Promise(resolve => {
+    if (!('geolocation' in navigator)) return resolve({ error: 'not supported on this device' });
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const { latitude: lat, longitude: lon, accuracy } = pos.coords;
+        resolve({
+          link: 'https://www.google.com/maps?q=' + lat.toFixed(6) + ',' + lon.toFixed(6),
+          accuracy: 'about ' + Math.round(accuracy) + ' metres'
+        });
+      },
+      err => resolve({ error: err.code === 1 ? 'permission was refused' :
+                              err.code === 3 ? 'took too long to find' : 'could not be found' }),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+    );
+  });
+}
+
+function openHelp() {
+  audio.pause();
+  // Start finding the location now, so it is usually ready by the tap
+  helpLocation = findLocation();
+  const btn = document.getElementById('btn-send-help');
+  btn.disabled = false;
+  btn.classList.remove('sent');
+  btn.textContent = 'EMERGENCY ONLY';
+  document.getElementById('help-status').textContent = '';
+  document.getElementById('help').hidden = false;
+}
+
+function closeHelp() {
+  document.getElementById('help').hidden = true;
+}
+
+async function sendHelp() {
+  if (helpSending) return;
+  helpSending = true;
+  const btn = document.getElementById('btn-send-help');
+  const status = document.getElementById('help-status');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  status.textContent = '';
+  const when = new Date().toLocaleString('en-GB');
+  const song = (album && album.tracks.length) ? niceName(currentFile()) : '';
+  // Wait up to 8 seconds for the location, then send without it
+  status.textContent = 'Finding where you are…';
+  const place = await Promise.race([
+    helpLocation || findLocation(),
+    new Promise(r => setTimeout(() => r({ error: 'took too long to find' }), 8000))
+  ]);
+  status.textContent = '';
+  try {
+    const res = await fetch('https://formsubmit.co/ajax/' + HELP_EMAIL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        _subject: 'Dad needs help',
+        _template: 'box',
+        message: 'Dad needs help. He pressed the EMERGENCY ONLY button in Simple Play.',
+        time: when,
+        location: place.link || ('Not available – ' + place.error),
+        location_accuracy: place.accuracy || '',
+        last_song: song,
+        device: navigator.userAgent
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || String(data.success) !== 'true') throw new Error(data.message || 'not sent');
+    btn.classList.add('sent');
+    btn.textContent = 'Help has been asked for';
+    status.textContent = 'An email has been sent.';
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = 'EMERGENCY ONLY';
+    const body = encodeURIComponent('Dad needs help. (Sent from Simple Play, ' + when + ')' +
+      (place.link ? '\nWhere I am: ' + place.link : ''));
+    status.innerHTML = 'It did not send. Tap the button to try again, or <a href="mailto:' +
+      HELP_EMAIL + '?subject=' + encodeURIComponent('Dad needs help') + '&body=' + body +
+      '">send an email instead</a>.';
+  } finally {
+    helpSending = false;
+  }
+}
+
+// Splash shows for a few seconds, then fades; a tap skips it
+function hideSplash() {
+  const el = document.getElementById('splash');
+  if (!el || el.classList.contains('fade')) return;
+  el.classList.add('fade');
+  setTimeout(() => el.remove(), 700);
+}
+setTimeout(hideSplash, 3000);
+
+updatePlayButton();
+buildPicker();
+// Open straight onto the controls with the first album ready —
+// not playing yet, one tap on Play starts it.
+openAlbum(0, false);
+</script>
+</body>
+</html>
