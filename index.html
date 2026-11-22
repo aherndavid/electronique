@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="1.55">
+<meta name="version" content="1.56">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -160,6 +160,7 @@
   }
   .splash.fade { opacity: 0; pointer-events: none; }
   .splash .logo { width: min(60vw, 45vh, 320px); height: auto; display: block; }
+  .splash .splash-version { font-size: 13px; color: #777; margin-top: -6px; }
   .splash .credit {
     position: absolute; left: 16px; right: 16px;
     bottom: calc(24px + env(safe-area-inset-bottom));
@@ -268,6 +269,7 @@
 <body>
 <div class="splash" id="splash" onclick="hideSplash()">
   <img class="logo" src="assets/dp-logo.webp" alt="dPaul">
+  <div class="splash-version" id="splash-version"></div>
   <div class="credit">Developed by David Ahern - DPAUL 2026</div>
 </div>
 <div class="photo-layer" id="photo-layer" hidden>
@@ -968,6 +970,8 @@ function sendFeedback() {
   location.href = 'mailto:' + HELP_EMAIL +
     '?subject=' + encodeURIComponent('Electronique feedback (v' + v + ')');
 }
+document.getElementById('splash-version').textContent =
+  'v' + (document.querySelector('meta[name="version"]')?.content || '');
 document.getElementById('howto-version').textContent =
   'Version ' + (document.querySelector('meta[name="version"]')?.content || '');
 
