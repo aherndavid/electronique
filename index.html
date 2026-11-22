@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="1.37">
+<meta name="version" content="1.39">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#111111">
@@ -12,7 +12,6 @@
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="manifest" href="site.webmanifest">
 <title>Music</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { min-height: 100%; }
@@ -56,23 +55,26 @@
   .album-btn img { width: 90px; height: 90px; object-fit: cover; border-radius: 10px; flex-shrink: 0; }
 
   /* ── Player ── */
-  /* Big cover centred at the top, titles underneath. Sized by screen
-     height too, so the buttons still fit without scrolling. */
-  .now { display: flex; flex-direction: column; align-items: center; gap: 14px; margin-bottom: 20px; }
+  /* Cover on the left, song details beside it on the right. Sized by
+     screen height too, so the buttons still fit without scrolling. */
+  .now { display: flex; flex-direction: row; align-items: center; gap: 16px; margin-bottom: 20px; }
   /* Fixed-size box: its space is kept even while the picture loads
      or when a song has none, so the buttons never jump. */
-  .now .art { width: min(50vw, 21vh, 250px); height: min(50vw, 21vh, 250px); border-radius: 14px; background: #222; overflow: hidden; flex-shrink: 0; }
+  .now .art { width: min(38vw, 24vh, 250px); height: min(38vw, 24vh, 250px); border-radius: 14px; background: #222; overflow: hidden; flex-shrink: 0; }
   .now .art img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .now .art img[hidden] { display: none; }
-  .now-text { text-align: center; min-width: 0; width: 100%; }
+  .now-text { text-align: left; min-width: 0; flex: 1 1 0; }
   /* Always two lines tall, whether the name is short or long */
   .now .track {
-    font-size: clamp(26px, 7vw, 40px); font-weight: bold; line-height: 1.2; height: 2.4em;
+    font-size: clamp(22px, 6vw, 38px); font-weight: bold; line-height: 1.2; max-height: 2.4em;
     word-break: break-word; overflow: hidden;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   }
   .now .track .year { color: #ffd400; white-space: nowrap; }
-  .now .count { font-size: clamp(18px, 4.5vw, 26px); color: #ccc; margin-top: 8px; }
+  .now .artist { font-size: clamp(18px, 4.6vw, 28px); font-weight: bold; color: #4fc3ff; margin-top: 6px; line-height: 1.2; }
+  .now .from { font-size: clamp(15px, 3.8vw, 22px); color: #ddd; margin-top: 4px; line-height: 1.25; }
+  .now .from:empty, .now .artist:empty { display: none; }
+  .now .count { font-size: clamp(15px, 3.8vw, 22px); color: #aaa; margin-top: 6px; }
 
   /* Previous / Play / Next stay in one row, even on a phone */
   /* Icon buttons: plain drawn shapes, no text */
@@ -156,7 +158,8 @@
     font-size: clamp(15px, 3.8vw, 26px); font-weight: 900; letter-spacing: 0.04em; line-height: 1.15;
     padding: 8px 6px;
   }
-  #btn-smooth { background: #8e1f6e; }
+  #btn-heart80s { background: #d6004f; }
+  #btn-gold { background: #b8860b; }
   #btn-close {
     display: block; width: 100%; margin-top: 18px; background: #a00000; color: #fff; border-color: #fff;
     font-size: clamp(22px, 5.5vw, 30px); font-weight: 900; letter-spacing: 0.08em;
@@ -211,6 +214,8 @@
       <div class="art"><img id="cover" alt="" hidden></div>
       <div class="now-text">
         <div class="track" id="track-name"></div>
+        <div class="artist" id="track-artist"></div>
+        <div class="from" id="track-from"></div>
         <div class="count" id="track-count"></div>
       </div>
     </div>
@@ -235,8 +240,8 @@
     </div>
 
     <div class="radio-row">
-      <button class="btn-radio" id="btn-lbc" onclick="toggleRadio('lbc')">LBC RADIO</button>
-      <button class="btn-radio" id="btn-smooth" onclick="toggleRadio('smooth')">SMOOTH RADIO</button>
+      <button class="btn-radio" id="btn-heart80s" onclick="toggleRadio('heart80s')">HEART 80s</button>
+      <button class="btn-radio" id="btn-gold" onclick="toggleRadio('gold')">GOLD RADIO</button>
     </div>
 
     <button id="btn-close" onclick="location.href='https://www.google.com'">CLOSE</button>
@@ -258,9 +263,10 @@
 
    "folder" is the folder name inside /albums.
    "tracks" is the list of MP3 file names, in play order.
-   Album art: the picture embedded in each MP3 is shown. If a song has
-   none, "cover.jpg" in the album folder is used (or name another file
-   with cover: "front.png").
+   Album art: the sleeve of the original album (or single) the song
+   first came out on, from assets/covers — named in "info" below.
+   Pictures embedded in the MP3s are ignored, as they are often from
+   compilations.
    "years" gives the year each song first came out, shown next to
    its name. Songs left out simply show no year.
    ───────────────────────────────────────────────────────────── */
@@ -372,7 +378,61 @@ const ALBUMS = [
       "West End Girls.mp3": 1985,
       "Why.mp3": 1984
     }
-  }
+,
+    // Artist, the album (or single) the song first came out on, its year,
+    // and that original sleeve in assets/covers. null = no picture.
+    info: {
+      "Are Friends Electric.mp3": ["Tubeway Army (Gary Numan)", "Replicas", 1979, "tubeway-army-replicas.jpg"],
+      "Bedsitter.mp3": ["Soft Cell", "Non-Stop Erotic Cabaret", 1981, "soft-cell-non-stop-erotic-cabaret.jpg"],
+      "Being Boiled.mp3": ["The Human League", "Holiday '80", 1980, "the-human-league-holiday-80.jpg"],
+      "Bizarre Love Triangle.mp3": ["New Order", "Brotherhood", 1986, "new-order-brotherhood.jpg"],
+      "Blue Monday.mp3": ["New Order", "Blue Monday (single)", 1983, "new-order-blue-monday.jpg"],
+      "Cars (Premier Mix).mp3": ["Gary Numan", "The Pleasure Principle", 1979, "gary-numan-the-pleasure-principle.jpg"],
+      "Computer World 2.mp3": ["Kraftwerk", "Computer World", 1981, "kraftwerk-computer-world.jpg"],
+      "Don_t Go.mp3": ["Yazoo", "Upstairs at Eric's", 1982, "yazoo-upstairs-at-eric-s.jpg"],
+      "Don_t You Want Me.mp3": ["The Human League", "Dare", 1981, "the-human-league-dare.jpg"],
+      "Electricity.mp3": ["Orchestral Manoeuvres in the Dark", "Orchestral Manoeuvres in the Dark", 1980, "orchestral-manoeuvres-in-the-dark-orchestral-manoeuvres-in-the-dark.jpg"],
+      "Enola Gay.mp3": ["Orchestral Manoeuvres in the Dark", "Organisation", 1980, "orchestral-manoeuvres-in-the-dark-organisation.jpg"],
+      "Everything Counts.mp3": ["Depeche Mode", "Construction Time Again", 1983, "depeche-mode-construction-time-again.jpg"],
+      "Fade to Grey.mp3": ["Visage", "Visage", 1980, "visage-visage.jpg"],
+      "Girls On Film.mp3": ["Duran Duran", "Duran Duran", 1981, "duran-duran-duran-duran.jpg"],
+      "Hungry Like The Wolf.mp3": ["Duran Duran", "Rio", 1982, "duran-duran-rio.jpg"],
+      "I Die You Die.mp3": ["Gary Numan", "I Die: You Die (single)", 1980, "gary-numan-i-die-you-die.jpg"],
+      "Is There Something I Should Know.mp3": ["Duran Duran", "Is There Something I Should Know? (single)", 1983, "duran-duran-is-there-something-i-should-know.jpg"],
+      "Just Can_t Get Enough.mp3": ["Depeche Mode", "Speak & Spell", 1981, "depeche-mode-speak-spell.jpg"],
+      "Let Me Go.mp3": ["Heaven 17", "The Luxury Gap", 1983, "heaven-17-the-luxury-gap.jpg"],
+      "Living On The Ceiling.mp3": ["Blancmange", "Happy Families", 1982, "blancmange-happy-families.jpg"],
+      "Love Action (I Believe In Love).mp3": ["The Human League", "Dare", 1981, "the-human-league-dare.jpg"],
+      "Mad World.mp3": ["Tears for Fears", "The Hurting", 1983, "tears-for-fears-the-hurting.jpg"],
+      "Metal.mp3": ["Gary Numan", "The Pleasure Principle", 1979, "gary-numan-the-pleasure-principle.jpg"],
+      "Mind of a Toy.mp3": ["Visage", "Visage", 1980, "visage-visage.jpg"],
+      "Mirror Man.mp3": ["The Human League", "Mirror Man (single)", 1982, "the-human-league-mirror-man.jpg"],
+      "New Europeans.mp3": ["Ultravox", "Vienna", 1980, "ultravox-vienna.jpg"],
+      "New Life.mp3": ["Depeche Mode", "Speak & Spell", 1981, "depeche-mode-speak-spell.jpg"],
+      "New Moon On Monday.mp3": ["Duran Duran", "Seven and the Ragged Tiger", 1983, "duran-duran-seven-and-the-ragged-tiger.jpg"],
+      "Only You.mp3": ["Yazoo", "Upstairs at Eric's", 1982, "yazoo-upstairs-at-eric-s.jpg"],
+      "Play to Win.mp3": ["Heaven 17", "Penthouse and Pavement", 1981, "heaven-17-penthouse-and-pavement.jpg"],
+      "See You.mp3": ["Depeche Mode", "A Broken Frame", 1982, "depeche-mode-a-broken-frame.jpg"],
+      "Sleepwalk.mp3": ["Ultravox", "Vienna", 1980, "ultravox-vienna.jpg"],
+      "Souvenir.mp3": ["Orchestral Manoeuvres in the Dark", "Architecture & Morality", 1981, "orchestral-manoeuvres-in-the-dark-architecture-morality.jpg"],
+      "Space Age Love Song.mp3": ["A Flock of Seagulls", "A Flock of Seagulls", 1982, "a-flock-of-seagulls-a-flock-of-seagulls.jpg"],
+      "Tainted Love.mp3": ["Soft Cell", "Non-Stop Erotic Cabaret", 1981, "soft-cell-non-stop-erotic-cabaret.jpg"],
+      "Talking Drum.mp3": ["Japan", "Tin Drum", 1981, "japan-tin-drum.jpg"],
+      "Telecommunication.mp3": ["A Flock of Seagulls", "A Flock of Seagulls", 1982, "a-flock-of-seagulls-a-flock-of-seagulls.jpg"],
+      "Telegraph.mp3": ["Orchestral Manoeuvres in the Dark", "Dazzle Ships", 1983, "orchestral-manoeuvres-in-the-dark-dazzle-ships.jpg"],
+      "Temptation.mp3": ["Heaven 17", "The Luxury Gap", 1983, "heaven-17-the-luxury-gap.jpg"],
+      "The Damned Don_t Cry.mp3": ["Visage", "The Anvil", 1982, "visage-the-anvil.jpg"],
+      "The Model.mp3": ["Kraftwerk", "The Man-Machine", 1978, "kraftwerk-the-man-machine.jpg"],
+      "The Perfect Kiss.mp3": ["New Order", "Low-Life", 1985, "new-order-low-life.jpg"],
+      "The Reflex.mp3": ["Duran Duran", "Seven and the Ragged Tiger", 1983, "duran-duran-seven-and-the-ragged-tiger.jpg"],
+      "The Wild Boys.mp3": ["Duran Duran", "Arena", 1984, "duran-duran-arena.jpg"],
+      "Too Shy.mp3": ["Kajagoogoo", "White Feathers", 1983, "kajagoogoo-white-feathers.jpg"],
+      "Torch.mp3": ["Soft Cell", "Torch (single)", 1982, null],
+      "Vienna.mp3": ["Ultravox", "Vienna", 1980, "ultravox-vienna.jpg"],
+      "Visions Of China.mp3": ["Japan", "Tin Drum", 1981, "japan-tin-drum.jpg"],
+      "West End Girls.mp3": ["Pet Shop Boys", "Please", 1986, "pet-shop-boys-please.jpg"],
+      "Why.mp3": ["Bronski Beat", "The Age of Consent", 1984, "bronski-beat-the-age-of-consent.jpg"]
+    }  }
 ];
 
 const PLAY_ICON  = '<svg viewBox="0 0 52 60"><polygon points="0,0 0,60 52,30"/></svg>';
@@ -541,6 +601,12 @@ function loadTrack(i, autoplay) {
     y.textContent = ' (' + year + ')';
     nameEl.appendChild(y);
   }
+  const inf = trackInfo(file);
+  document.getElementById('track-artist').textContent = inf ? inf[0] : '';
+  document.getElementById('track-from').textContent = inf
+    ? (inf[1].endsWith('(single)') ? 'Single: ' + inf[1].replace(/\s*\(single\)$/, '')
+                                   : 'Album: ' + inf[1]) + ' (' + inf[2] + ')'
+    : '';
   document.getElementById('track-count').textContent =
     'Song ' + (trackIndex + 1) + ' of ' + order.length;
   updateLikeButton();
@@ -556,47 +622,29 @@ const coverEl = document.getElementById('cover');
 let artToken = 0;
 
 function setArt(src) {
-  if (!src) { coverEl.hidden = true; coverEl.removeAttribute('src'); return; }
+  if (!src) { coverEl.hidden = true; coverEl.removeAttribute('src'); updateMediaSession(null); return; }
   coverEl.onerror = () => { coverEl.hidden = true; };
   coverEl.onload = () => { coverEl.hidden = false; };
   coverEl.src = src;
   updateMediaSession(src);
 }
 
-function bytesToDataUrl(pic) {
-  let bin = '';
-  const bytes = pic.data;
-  for (let i = 0; i < bytes.length; i += 0x8000) {
-    bin += String.fromCharCode.apply(null, bytes.slice(i, i + 0x8000));
-  }
-  return 'data:' + (pic.format || 'image/jpeg') + ';base64,' + btoa(bin);
-}
+function trackInfo(file) { return album && album.info && album.info[file]; }
 
+// Original sleeve for this song, or no picture if there isn't one
 function showArt(file) {
-  const token = ++artToken;
-  const albumCover = fileUrl(album.folder, album.cover || 'cover.jpg');
-  coverEl.hidden = true;
-  updateMediaSession(null);
-
-  if (!window.jsmediatags) { setArt(albumCover); return; }
-  const url = new URL(fileUrl(album.folder, file), location.href).href;
-  window.jsmediatags.read(url, {
-    onSuccess: tag => {
-      if (token !== artToken) return;          // song changed meanwhile
-      const pic = tag.tags && tag.tags.picture;
-      setArt(pic && pic.data && pic.data.length ? bytesToDataUrl(pic) : albumCover);
-    },
-    onError: () => { if (token === artToken) setArt(albumCover); }
-  });
+  artToken++;
+  const inf = trackInfo(file);
+  setArt(inf && inf[3] ? 'assets/covers/' + encodeURIComponent(inf[3]) : null);
 }
 
-// Song, album and picture on the lock screen
 function updateMediaSession(artSrc) {
   if (!('mediaSession' in navigator) || !album || radio) return;
   navigator.mediaSession.metadata = new MediaMetadata({
     title: niceName(currentFile()),
-    album: album.title,
-    artwork: artSrc ? [{ src: artSrc, sizes: '512x512' }] : []
+    artist: (trackInfo(currentFile()) || [])[0] || '',
+    album: (trackInfo(currentFile()) || [])[1] || album.title,
+    artwork: artSrc ? [{ src: new URL(artSrc, location.href).href }] : []
   });
 }
 
@@ -605,8 +653,8 @@ function updateMediaSession(artSrc) {
 // never play at once. Tapping the playing station's button again (or
 // a skip button) goes back to the songs.
 const STATIONS = {
-  lbc:    { name: 'LBC Radio',    label: 'LBC RADIO',    url: 'https://media-ssl.musicradio.com/LBCUKMP3',    art: 'assets/lbc.jpg' },
-  smooth: { name: 'Smooth Radio', label: 'SMOOTH RADIO', url: 'https://media-ssl.musicradio.com/SmoothUKMP3', art: 'assets/smooth.svg' }
+  heart80s: { name: 'Heart 80s',  label: 'HEART 80s',  url: 'https://media-ssl.musicradio.com/Heart80sMP3', art: 'assets/heart80s.svg' },
+  gold:     { name: 'Gold Radio', label: 'GOLD RADIO', url: 'https://media-ssl.musicradio.com/GoldMP3',     art: 'assets/gold.svg' }
 };
 let radio = null;                              // key of the station playing, or null for music
 
@@ -625,6 +673,8 @@ function toggleRadio(key) {
   artToken++;                                  // ignore any song picture still loading
   setArt(st.art);
   document.getElementById('track-name').textContent = st.name;
+  document.getElementById('track-artist').textContent = '';
+  document.getElementById('track-from').textContent = '';
   document.getElementById('track-count').textContent = 'Live';
   msg.textContent = '';
   if ('mediaSession' in navigator) {
