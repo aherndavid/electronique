@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="1.43">
+<meta name="version" content="1.46">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -70,6 +70,13 @@
   .now .art { width: min(46vw, 29vh, 340px); height: min(46vw, 29vh, 340px); border-radius: 14px; background: #222; overflow: hidden; flex-shrink: 0; }
   .now .art img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .now .art img[hidden] { display: none; }
+  .now .art { position: relative; }
+  .now .art-msg {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    padding: 10px; text-align: center; color: #aaa; line-height: 1.2;
+    font-size: clamp(14px, 3.6vw, 20px);
+  }
+  .now .art-msg[hidden] { display: none; }
   .now-text { text-align: left; min-width: 0; flex: 1 1 0; }
   /* Always two lines tall, whether the name is short or long */
   .now .track {
@@ -91,11 +98,10 @@
   .controls { display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 12px; margin-bottom: 18px; }
   .controls button { height: min(clamp(110px, 28vw, 150px), 18vh); }
   .controls svg { width: 58%; max-width: 90px; height: auto; }
-  /* Shades of grey: darker round the edges, lightest in the middle */
-  #btn-prev, #btn-next { background: #5c5c5c; color: #f0f0f0; border-color: #7a7a7a; }
-  #btn-play { background: #e0e0e0; color: #111; border-color: #bdbdbd; }
+  #btn-prev, #btn-next { background: #fff1a8; color: #111; border-color: #d9c97a; }
+  #btn-play { background: #ff8c00; color: #111; border-color: #ffb04d; }
   #btn-play svg { width: 46%; max-width: 80px; }
-  #btn-play.playing { background: #9e9e9e; border-color: #c8c8c8; }
+  #btn-play.playing { background: #cc6f00; border-color: #ff9a2e; }
 
   /* Thumbs down / thumbs up */
   .rate { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -167,13 +173,17 @@
     font-size: clamp(15px, 3.8vw, 26px); font-weight: 900; letter-spacing: 0.04em; line-height: 1.15;
     padding: 8px 6px;
   }
-  #btn-heart80s { background: #474747; }
-  #btn-gold { background: #626262; }
-  #btn-close {
-    display: block; width: 100%; margin-top: 18px; background: #2a2a2a; color: #e0e0e0; border-color: #5a5a5a;
-    font-size: clamp(22px, 5.5vw, 30px); font-weight: 900; letter-spacing: 0.08em;
+  #btn-heart80s { background: #d6004f; border-color: #ff5c93; }
+  #btn-gold { background: #b8860b; border-color: #e0b84a; }
+  /* EMAIL and CLOSE, set well apart from the music buttons */
+  .end-row { display: flex; gap: 12px; margin-top: 44px; }
+  #btn-email, #btn-close {
+    flex: 1 1 0; min-width: 0; color: #fff;
+    font-size: clamp(20px, 5vw, 30px); font-weight: 900; letter-spacing: 0.08em;
     padding: 8px 12px;
   }
+  #btn-email { background: #1e6fd9; border-color: #5a9bef; }
+  #btn-close { background: #7a0000; border-color: #a83232; }
   .help {
     position: fixed; inset: 0; z-index: 90;
     background: #111;
@@ -220,7 +230,7 @@
   <!-- Screen 2: play it -->
   <div id="player" hidden>
     <div class="now">
-      <div class="art"><img id="cover" alt="" hidden></div>
+      <div class="art"><img id="cover" alt="" hidden><div class="art-msg" id="art-msg" hidden>search for album art</div></div>
       <div class="now-text">
         <div class="track" id="track-name"></div>
         <div class="artist" id="track-artist"></div>
@@ -253,7 +263,10 @@
       <button class="btn-radio" id="btn-gold" onclick="toggleRadio('gold')">GOLD RADIO</button>
     </div>
 
-    <button id="btn-close" onclick="location.href='https://www.google.com'">CLOSE</button>
+    <div class="end-row">
+      <button id="btn-email" onclick="openEmail()">EMAIL</button>
+      <button id="btn-close" onclick="location.href='https://www.google.com'">CLOSE</button>
+    </div>
 
     <div class="msg" id="msg"></div>
   </div>
@@ -640,9 +653,12 @@ const coverEl = document.getElementById('cover');
 let artToken = 0;
 
 function setArt(src) {
-  if (!src) { coverEl.hidden = true; coverEl.removeAttribute('src'); updateMediaSession(null); return; }
-  coverEl.onerror = () => { coverEl.hidden = true; };
-  coverEl.onload = () => { coverEl.hidden = false; };
+  const artMsg = document.getElementById('art-msg');
+  if (!src) { coverEl.hidden = true; artMsg.hidden = true; coverEl.removeAttribute('src'); updateMediaSession(null); return; }
+  // Shown while the picture loads
+  coverEl.hidden = true; artMsg.hidden = false;
+  coverEl.onerror = () => { coverEl.hidden = true; artMsg.hidden = true; };
+  coverEl.onload = () => { coverEl.hidden = false; artMsg.hidden = true; };
   coverEl.src = src;
   updateMediaSession(src);
 }
@@ -769,6 +785,11 @@ document.getElementById('version').textContent =
 // button there sends an email through FormSubmit.co. The very first
 // one sent makes FormSubmit email the owner a link to switch it on.
 const HELP_EMAIL = 'davidpaulahern@gmail.com';
+
+// EMAIL button: opens the phone's own email app with a new message
+function openEmail() {
+  location.href = 'mailto:' + HELP_EMAIL + '?subject=' + encodeURIComponent('From Electronique');
+}
 let helpSending = false;
 let helpLocation = null;   // Promise of { link, accuracy } or { error }
 
