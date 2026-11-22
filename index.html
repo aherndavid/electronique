@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="1.50">
+<meta name="version" content="1.51">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -184,6 +184,12 @@
   /* EMAIL under the radio buttons; CLOSE on its own further down.
      Both full width, so the same length. */
   /* CAMERA | EMAIL and FEEDBACK | CLOSE: two rows, half width each */
+  .wide-btn {
+    display: block; width: 100%; margin-top: 8px; color: #fff;
+    font-size: clamp(20px, 5vw, 30px); font-weight: 900; letter-spacing: 0.06em;
+    padding: 8px 12px;
+  }
+  #btn-close.wide-btn { margin-top: 36px; }
   .pair-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
   .pair-row button {
     display: block; width: 100%; min-width: 0; color: #fff;
@@ -298,10 +304,7 @@
     </div>
     <input type="file" id="camera-input" accept="image/*" capture="environment" hidden onchange="gotPhoto(this)">
 
-    <div class="pair-row">
-      <button id="btn-feedback" onclick="toggleStars()">FEEDBACK</button>
-      <button id="btn-close" onclick="location.href='https://www.google.com'">CLOSE</button>
-    </div>
+    <button id="btn-feedback" class="wide-btn" onclick="toggleStars()">FEEDBACK</button>
     <div class="stars" id="stars" hidden>
       <button onclick="rateApp(1)" aria-label="1 star">★</button>
       <button onclick="rateApp(2)" aria-label="2 stars">★</button>
@@ -309,6 +312,9 @@
       <button onclick="rateApp(4)" aria-label="4 stars">★</button>
       <button onclick="rateApp(5)" aria-label="5 stars">★</button>
     </div>
+
+    <!-- CLOSE: on its own, further down, full width -->
+    <button id="btn-close" class="wide-btn" onclick="location.href='https://www.google.com'">CLOSE</button>
 
     <div class="msg" id="msg"></div>
   </div>
